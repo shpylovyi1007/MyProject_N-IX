@@ -14,19 +14,14 @@ public:
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class USceneComponent* Root;
-    
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class UStaticMeshComponent* MeshComponent;
-    
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class UAudioComponent* AudioComponent;
+	TObjectPtr<USceneComponent> Root;
 
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Radio")
-	void RadioTurnOff();
-	virtual void RadioTurnOff_Implementation();
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Radio")
-	void RadioTurnOn();
-	virtual void RadioTurnOn_Implementation();
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UAudioComponent> AudioComponent;
+
+	UFUNCTION(BlueprintCallable, Category = "Radio")
+     virtual  void RadioOnOff(bool bShouldBeOn);
 };

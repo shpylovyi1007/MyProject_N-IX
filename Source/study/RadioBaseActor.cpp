@@ -18,18 +18,10 @@ ARadioBaseActor::ARadioBaseActor()
 	AudioComponent->bAutoActivate = false;
 }
 
-void ARadioBaseActor::RadioTurnOff_Implementation()
+void ARadioBaseActor::RadioOnOff(bool bShouldBeOn)
 {
 	if (AudioComponent)
 	{
-		AudioComponent->SetPaused(true);
-	}
-}
-
-void ARadioBaseActor::RadioTurnOn_Implementation()
-{
-	if (AudioComponent)
-	{
-		AudioComponent->SetPaused(false);
+		AudioComponent->SetPaused(!bShouldBeOn);
 	}
 }
