@@ -39,13 +39,8 @@ void AAProjectile::Tick(float DeltaTime)
 
 void AAProjectile::RotateProjectile(float Value)
 {
-	if (MeshComponent)
-	{
 		FRotator CurrentRotation = MeshComponent->GetRelativeRotation();
 		FRotator NewRotation = CurrentRotation;
 		NewRotation.Pitch += Value;
 		MeshComponent->SetRelativeRotation(NewRotation);
-        
-		UE_LOG(LogTemp, Warning, TEXT("Mesh rotated - Pitch: %.2f"), NewRotation.Pitch);
-	}
 }

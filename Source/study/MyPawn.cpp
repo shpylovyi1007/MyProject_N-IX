@@ -17,11 +17,31 @@ AMyPawn::AMyPawn()
     
     CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComponent"));
     CameraComponent->SetupAttachment(SpringArmComponent);
+    
+    
+    
+    
+    
+    CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CapsuleComponent"));
+    CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    CapsuleComponent->SetCollisionObjectType(ECollisionChannel::ECC_Pawn);
+    CapsuleComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
+    CapsuleComponent->SetCapsuleHalfHeight(90.0f);
+    CapsuleComponent->SetCapsuleRadius(50.0f);
+    RootComponent = CapsuleComponent;
+    CapsuleComponent->SetCollisionProfileName(TEXT("CustomProfileName"));
+    
+    ReadOnlyStaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ReadOnlyStaticMesh"));
+    ReadOnlyStaticMesh->SetupAttachment(RootComponent);
 }
 
 void AMyPawn::BeginPlay()
 {
     Super::BeginPlay();
+    
+    CapsuleComponent->OnComponentBeginOverlap.AddDynamic(this, &AMyPawn::OnBeginOverlap);
+
+    CapsuleComponent->OnComponentEndOverlap.AddDynamic(this, &AMyPawn::OnEndOverlap);
     
     if(APlayerController* PlayerController = Cast<APlayerController>(GetController()))
     {
@@ -59,9 +79,15 @@ void AMyPawn::InputMove(const FInputActionValue& InputActionValue)
 {
     const FVector2D& MovementVector = InputActionValue.Get<FVector2D>();
     
-    SetActorLocation(GetActorLocation() + GetActorForwardVector() * MovementVector.Y);
-    
-    SetActorLocation(GetActorLocation() + GetActorRightVector() * MovementVector.X);
+    FVector NewLocation = GetActorLocation();
+
+    NewLocation += GetActorForwardVector() * MovementVector.Y;
+
+    NewLocation += GetActorRightVector() * MovementVector.X;
+
+
+
+    SetActorLocation(NewLocation, true);
 }
 
 void AMyPawn::InputZoom(const FInputActionValue& InputActionValue)
@@ -121,18 +147,35 @@ void AMyPawn::SpawnProjectile()
 
 void AMyPawn::RotateLastProjectile(const FInputActionValue& InputActionValue)
 {
-    if (!LastSpawnedProjectile)
-    {
-        UE_LOG(LogTemp, Error, TEXT("LastSpawnedProjectile is NULL!"));
-        return;
-    }
-    
-    if (!IsValid(LastSpawnedProjectile))
-    {
-        UE_LOG(LogTemp, Error, TEXT("LastSpawnedProjectile is not valid!"));
-        return;
-    }
-    
-    UE_LOG(LogTemp, Warning, TEXT("Rotating: 5.000000 degrees"));
     LastSpawnedProjectile->RotateProjectile(5.0f);
+}
+
+void AMyPawn::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+
+{
+
+    if (GEngine)
+
+    {
+
+        GEngine->AddOnScreenDebugMessage(0, 1.0f, FColor::Red, FString::Printf(TEXT("Begin overlapping with %s"), *OtherActor->GetName()));
+
+    }
+
+}
+
+
+
+void AMyPawn::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+
+{
+
+    if (GEngine)
+
+    {
+
+        GEngine->AddOnScreenDebugMessage(0, 1.0f, FColor::Red, FString::Printf(TEXT("End overlapping with %s"), *OtherActor->GetName()));
+
+    }
+
 }

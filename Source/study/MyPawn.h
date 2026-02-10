@@ -6,6 +6,7 @@
 #include "Camera/CameraComponent.h"
 #include "InputActionValue.h"
 #include "InputMappingContext.h"
+#include "Components/CapsuleComponent.h"
 #include "MyPawn.generated.h"
 
 UCLASS()
@@ -21,7 +22,7 @@ protected:
     
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
-    
+	
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<USpringArmComponent> SpringArmComponent;
     
@@ -69,8 +70,23 @@ protected:
 	
 	float CurrentScale = 1.0f;  
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UStaticMeshComponent> ReadOnlyStaticMesh;
 	
-    
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UCapsuleComponent> CapsuleComponent;
+
+	UFUNCTION()
+
+	void OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+
+
+	UFUNCTION()
+
+	void OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	
+	
 public: 
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
