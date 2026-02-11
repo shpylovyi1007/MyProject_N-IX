@@ -38,11 +38,7 @@ AMyPawn::AMyPawn()
 void AMyPawn::BeginPlay()
 {
     Super::BeginPlay();
-    
-    CapsuleComponent->OnComponentBeginOverlap.AddDynamic(this, &AMyPawn::OnBeginOverlap);
-
-    CapsuleComponent->OnComponentEndOverlap.AddDynamic(this, &AMyPawn::OnEndOverlap);
-    
+  
     if(APlayerController* PlayerController = Cast<APlayerController>(GetController()))
     {
         ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer();
@@ -150,32 +146,3 @@ void AMyPawn::RotateLastProjectile(const FInputActionValue& InputActionValue)
     LastSpawnedProjectile->RotateProjectile(5.0f);
 }
 
-void AMyPawn::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
-
-{
-
-    if (GEngine)
-
-    {
-
-        GEngine->AddOnScreenDebugMessage(0, 1.0f, FColor::Red, FString::Printf(TEXT("Begin overlapping with %s"), *OtherActor->GetName()));
-
-    }
-
-}
-
-
-
-void AMyPawn::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
-
-{
-
-    if (GEngine)
-
-    {
-
-        GEngine->AddOnScreenDebugMessage(0, 1.0f, FColor::Red, FString::Printf(TEXT("End overlapping with %s"), *OtherActor->GetName()));
-
-    }
-
-}
