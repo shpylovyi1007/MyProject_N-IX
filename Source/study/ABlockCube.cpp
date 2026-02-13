@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Components/StaticMeshComponent.h"
 #include "ABlockCube.h"
+#include "Components/StaticMeshComponent.h"
 
 // Sets default values
 AABlockCube::AABlockCube()
@@ -14,11 +14,12 @@ AABlockCube::AABlockCube()
 	
 	CubeStaticMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	CubeStaticMesh->SetCollisionObjectType(ECollisionChannel::ECC_WorldStatic);
+	
 	CubeStaticMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	CubeStaticMesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
-	CubeStaticMesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
     
 	CubeStaticMesh->SetNotifyRigidBodyCollision(true);
+	CubeStaticMesh->BodyInstance.bNotifyRigidBodyCollision = true;
 }
 
 // Called when the game starts or when spawned

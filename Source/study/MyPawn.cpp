@@ -7,10 +7,24 @@ AMyPawn::AMyPawn()
 {
     PrimaryActorTick.bCanEverTick = true;
     
-    RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootSceneComponent"));
+   
+    
+    CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CapsuleComponent"));
+    RootComponent = CapsuleComponent;  
+    
+    CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    CapsuleComponent->SetCollisionObjectType(ECollisionChannel::ECC_Pawn);
+    CapsuleComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
+    CapsuleComponent->SetCapsuleHalfHeight(90.0f);
+    CapsuleComponent->SetCapsuleRadius(50.0f);
+    
+    CapsuleComponent->SetSimulatePhysics(false);   
+    CapsuleComponent->BodyInstance.bLockXRotation = true;
+    CapsuleComponent->BodyInstance.bLockYRotation = true;
     
     StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
     StaticMeshComponent->SetupAttachment(RootComponent);
+    StaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     
     SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComponent"));
     SpringArmComponent->SetupAttachment(RootComponent);
@@ -18,21 +32,21 @@ AMyPawn::AMyPawn()
     CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComponent"));
     CameraComponent->SetupAttachment(SpringArmComponent);
     
-    
-    
-    
-    
-    CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CapsuleComponent"));
-    CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-    CapsuleComponent->SetCollisionObjectType(ECollisionChannel::ECC_Pawn);
-    CapsuleComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
-    CapsuleComponent->SetCapsuleHalfHeight(90.0f);
-    CapsuleComponent->SetCapsuleRadius(50.0f);
-    RootComponent = CapsuleComponent;
-    CapsuleComponent->SetCollisionProfileName(TEXT("CustomProfileName"));
-    
     ReadOnlyStaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ReadOnlyStaticMesh"));
     ReadOnlyStaticMesh->SetupAttachment(RootComponent);
+    ReadOnlyStaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); 
+    
+    bUseControllerRotationPitch = false;
+    bUseControllerRotationYaw = true;    
+    bUseControllerRotationRoll = false;
+    
+    if (SpringArmComponent)
+    {
+        SpringArmComponent->bUsePawnControlRotation = true;   
+        SpringArmComponent->bInheritPitch = true;
+        SpringArmComponent->bInheritYaw = true;
+        SpringArmComponent->bInheritRoll = false;
+    }
 }
 
 void AMyPawn::BeginPlay()
@@ -53,6 +67,8 @@ void AMyPawn::BeginPlay()
 void AMyPawn::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+    
+     
 }
 
 void AMyPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -68,6 +84,7 @@ void AMyPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
         Input->BindAction(InputActionDecreaseScale, ETriggerEvent::Started, this, &ThisClass::DecreaseScale);
         Input->BindAction(InputActionSpawnProjectile, ETriggerEvent::Started, this, &ThisClass::SpawnProjectile);
         Input->BindAction(InputActionRotateProjectile, ETriggerEvent::Triggered, this, &ThisClass::RotateLastProjectile);
+        Input->BindAction(InputActionLineTrace, ETriggerEvent::Started, this, &ThisClass::PerformLineTrace);
     }
 }
 
@@ -75,15 +92,26 @@ void AMyPawn::InputMove(const FInputActionValue& InputActionValue)
 {
     const FVector2D& MovementVector = InputActionValue.Get<FVector2D>();
     
-    FVector NewLocation = GetActorLocation();
-
-    NewLocation += GetActorForwardVector() * MovementVector.Y;
-
-    NewLocation += GetActorRightVector() * MovementVector.X;
-
-
-
-    SetActorLocation(NewLocation, true);
+    FVector CurrentLocation = GetActorLocation();
+    FVector DesiredMove = FVector::ZeroVector;
+    
+    DesiredMove += GetActorForwardVector() * MovementVector.Y * 10.0f;  
+    
+    DesiredMove += GetActorRightVector() * MovementVector.X * 10.0f;
+    
+    FVector NewLocation = CurrentLocation + DesiredMove;
+    
+    FHitResult HitResult;
+    SetActorLocation(NewLocation, true, &HitResult, ETeleportType::None);
+    
+    if (HitResult.bBlockingHit)
+    {
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Orange, 
+                TEXT("Pawn is blocked!"));
+        }
+    }
 }
 
 void AMyPawn::InputZoom(const FInputActionValue& InputActionValue)
@@ -92,8 +120,6 @@ void AMyPawn::InputZoom(const FInputActionValue& InputActionValue)
 
     float ZoomValue = InputActionValue.Get<float>();
 
-
-
     float NewTargetArmLength = SpringArmComponent->TargetArmLength + ZoomValue;
 
     SpringArmComponent->TargetArmLength = FMath::Clamp(NewTargetArmLength, 200, 500);
@@ -101,17 +127,11 @@ void AMyPawn::InputZoom(const FInputActionValue& InputActionValue)
 }
 
 void AMyPawn::InputLook(const FInputActionValue& InputActionValue)
-
 {
-
-    FVector2D LookAxisVector=InputActionValue.Get<FVector2D>();
-
-
-
+    const FVector2D LookAxisVector = InputActionValue.Get<FVector2D>();
+    
     AddControllerYawInput(LookAxisVector.X);
-
     AddControllerPitchInput(LookAxisVector.Y);
-
 }
 
 void AMyPawn::IncreaseScale()
@@ -146,3 +166,104 @@ void AMyPawn::RotateLastProjectile(const FInputActionValue& InputActionValue)
     LastSpawnedProjectile->RotateProjectile(5.0f);
 }
 
+
+void AMyPawn::PerformLineTrace()
+{
+    FVector CameraLocation = CameraComponent->GetComponentLocation();
+    FVector CameraForward = CameraComponent->GetForwardVector();
+    
+    FVector Start = CameraLocation;
+    FVector End = Start + (CameraForward * 10000.0f);
+    
+    FCollisionQueryParams QueryParams;
+    QueryParams.AddIgnoredActor(this);  
+    QueryParams.bTraceComplex = false;
+    
+    TArray<FHitResult> HitResults;
+    
+    
+    bool bHit = GetWorld()->LineTraceMultiByChannel(
+        HitResults,
+        Start,
+        End,
+        ECollisionChannel::ECC_Visibility,
+        QueryParams
+    );
+    
+    if (bHit)
+    {
+     
+        for (const FHitResult& Hit : HitResults)
+        {
+            if (Hit.GetActor())
+            {
+              
+                FString CollisionType;
+                
+                
+                if (Hit.bBlockingHit)
+                {
+                    CollisionType = TEXT("Block");
+                }
+                else
+                {
+                    CollisionType = TEXT("Overlap");
+                }
+                
+               
+                if (GEngine)
+                {
+                    GEngine->AddOnScreenDebugMessage(
+                        -1,
+                        5.0f,
+                        FColor::Yellow,
+                        FString::Printf(TEXT("Trace hit: %s | Type: %s"), 
+                                      *Hit.GetActor()->GetName(), 
+                                      *CollisionType)
+                    );
+                }
+                
+               
+                DrawDebugLine(
+                    GetWorld(),
+                    Start,
+                    Hit.Location,
+                    FColor::Red,
+                    false,
+                    5.0f,
+                    0,
+                    2.0f
+                );
+                
+                
+                DrawDebugPoint(
+                    GetWorld(),
+                    Hit.Location,
+                    10.0f,
+                    FColor::Green,
+                    false,
+                    5.0f
+                );
+            }
+        }
+    }
+    else
+    {
+        
+        DrawDebugLine(
+            GetWorld(),
+            Start,
+            End,
+            FColor::Blue,
+            false,
+            5.0f,
+            0,
+            1.0f
+        );
+        
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::White, TEXT("Trace hit nothing"));
+        }
+    }
+}

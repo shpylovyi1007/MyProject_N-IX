@@ -59,6 +59,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UInputAction> InputActionDecreaseScale;
     
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UInputAction> InputActionLineTrace;
+    
+	void PerformLineTrace();
 	
 	void InputMove(const FInputActionValue& InputActionValue);
 	void InputZoom(const FInputActionValue& InputActionValue);
