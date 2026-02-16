@@ -1,6 +1,7 @@
 #include "MyPawn.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "AProjectile.h"
 
 AMyPawn::AMyPawn()
@@ -169,101 +170,40 @@ void AMyPawn::RotateLastProjectile(const FInputActionValue& InputActionValue)
 
 void AMyPawn::PerformLineTrace()
 {
-    FVector CameraLocation = CameraComponent->GetComponentLocation();
-    FVector CameraForward = CameraComponent->GetForwardVector();
+    if (!CameraComponent) return;
     
-    FVector Start = CameraLocation;
-    FVector End = Start + (CameraForward * 10000.0f);
+    FVector Start = CameraComponent->GetComponentLocation();
+    FVector End = Start + (CameraComponent->GetForwardVector() * 10000.0f);
     
-    FCollisionQueryParams QueryParams;
-    QueryParams.AddIgnoredActor(this);  
-    QueryParams.bTraceComplex = false;
+    TArray<AActor*> ActorsToIgnore;
+    ActorsToIgnore.Add(this);
     
     TArray<FHitResult> HitResults;
     
-    
-    bool bHit = GetWorld()->LineTraceMultiByChannel(
-        HitResults,
+    bool bHit = UKismetSystemLibrary::LineTraceMulti(
+        this,                                
         Start,
         End,
-        ECollisionChannel::ECC_Visibility,
-        QueryParams
+        UEngineTypes::ConvertToTraceType(ECC_Visibility),
+        false,
+        ActorsToIgnore,
+        EDrawDebugTrace::ForDuration,
+        HitResults,
+        true,
+        FLinearColor::Red,
+        FLinearColor::Green,
+        5.0f
     );
     
-    if (bHit)
+    for (const FHitResult& Hit : HitResults)
     {
-     
-        for (const FHitResult& Hit : HitResults)
+        if (Hit.GetActor() && GEngine)
         {
-            if (Hit.GetActor())
-            {
-              
-                FString CollisionType;
-                
-                
-                if (Hit.bBlockingHit)
-                {
-                    CollisionType = TEXT("Block");
-                }
-                else
-                {
-                    CollisionType = TEXT("Overlap");
-                }
-                
-               
-                if (GEngine)
-                {
-                    GEngine->AddOnScreenDebugMessage(
-                        -1,
-                        5.0f,
-                        FColor::Yellow,
-                        FString::Printf(TEXT("Trace hit: %s | Type: %s"), 
-                                      *Hit.GetActor()->GetName(), 
-                                      *CollisionType)
-                    );
-                }
-                
-               
-                DrawDebugLine(
-                    GetWorld(),
-                    Start,
-                    Hit.Location,
-                    FColor::Red,
-                    false,
-                    5.0f,
-                    0,
-                    2.0f
-                );
-                
-                
-                DrawDebugPoint(
-                    GetWorld(),
-                    Hit.Location,
-                    10.0f,
-                    FColor::Green,
-                    false,
-                    5.0f
-                );
-            }
-        }
-    }
-    else
-    {
-        
-        DrawDebugLine(
-            GetWorld(),
-            Start,
-            End,
-            FColor::Blue,
-            false,
-            5.0f,
-            0,
-            1.0f
-        );
-        
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::White, TEXT("Trace hit nothing"));
+            FString Type = Hit.bBlockingHit ? TEXT("Block") : TEXT("Overlap");
+            FColor Color = Hit.bBlockingHit ? FColor::Red : FColor::Green;
+            
+            GEngine->AddOnScreenDebugMessage(-1, 5.0f, Color,
+                FString::Printf(TEXT("%s | %s"), *Hit.GetActor()->GetName(), *Type));
         }
     }
 }
