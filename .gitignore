@@ -1,0 +1,9 @@
+.vs/
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+*.pdb
+*.obj
+*.pch
+*.bin
